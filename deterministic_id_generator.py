@@ -16,6 +16,7 @@ def file_dialog():
     root = Tk()
     root.withdraw()
     
+    # limit file types
     filetypes = (
         ('text files', '*.txt'),
         ('csv files', '*.csv')
@@ -29,12 +30,20 @@ def file_dialog():
 
 
 def generate_salt(n = 20):
-    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=n))
+    '''
+    Generate a random string of n (default 20) ascii upper and lower case characters and digits
+    '''
+    return ''.join(random.choices(string.ascii_uppercase + string.ascii_lowercase + string.digits, k=n))
 
 
 def input_settings():
     '''
     Load the args and set the program settings
+    arg 1: LLC_MODE, True or False.
+        determines program flow (LLC MODE automates where possible with LLC-specific assumptions)
+    arg 2: N, int.
+        The size of the ID length (before addition of 2 extra digits)
+        Final ID length will be N+2
     '''
     if len(sys.argv) > 1 and sys.argv[1].lower() == "true":
         try:
@@ -48,9 +57,10 @@ def input_settings():
             except EXCEPTION:
                 print("Error in input 'N' (position 2), using default value")
         else:
-            N = 9
+            N = 14
     else:
         LLC_mode = False
+        N = 14
 
         
     return LLC_mode, N
@@ -97,7 +107,6 @@ if __name__ == "__main__":
         # dulicate checker
         idbase['dupflag'] = idbase.duplicated(['hashedidN'], keep=False)
         # check all ids are unqiue any will return true if one or more elements are ture. If false, all ids are unique
-        print(idbase)
         if idbase.dupflag.any() == True:
             print('Duplicate IDs. Regenerating salt...')
             continue
@@ -105,6 +114,8 @@ if __name__ == "__main__":
         else:
             break
             # Once on duplicates are generated, continue
+
+            
     # create directory for salt
     salt_path = os.path.join(wd,'salt')
     if not os.path.exists(salt_path):
@@ -112,7 +123,7 @@ if __name__ == "__main__":
     else:
         raise FileExistsError("File {} already exists".format(salt_path))
     # store salt for reproducability
-    text_file = open(os.path.join(salt_path, 'salt'+temp_schema_placeholder+'.txt'),'w')
+    text_file = open(os.path.join(salt_path, temp_schema_placeholder+'_salt.txt'),'w')
     text_file.write(salt)
     text_file.close()
 
@@ -121,7 +132,7 @@ if __name__ == "__main__":
     if LLC_mode:
         prefix = "1"
     else:
-        prefix = input('Define a 1 digit prefix number for id ')
+        prefix = input('Define a one digit prefix number for id ')
     idbase['hashedidN_pref'] = str(prefix) + idbase['hashedidN']
 
     # STEP 4
@@ -144,8 +155,14 @@ if __name__ == "__main__":
     else:
         idcolname = input('specify column name for new ID... ')
     idbase.rename(columns={'hashedidN_pref_check':idcolname},inplace=True)
+
     # strip down file
     sailpreg = idbase[[idtohash, idcolname]]
+
+    #debug prints
+    print(idbase)
+    print(sailpreg)
+
     # create input for file name
     if LLC_mode:
         filename = os.path.split(inputfile)[1].split(".")[0] + "_encypted"
